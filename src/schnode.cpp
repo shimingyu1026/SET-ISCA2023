@@ -1,6 +1,8 @@
 #include "schnode.h"
 
 #include <cassert>
+#include <map>
+#include <vector>
 
 #include "layerengine.h"
 #include "network.h"
@@ -269,6 +271,90 @@ void LNode::print_tree(std::string pad, std::ostream& os) const{
 	os << std::endl;
 }
 
+// Structure to store layer execution info with chiplet information
+struct LayerExecInfo{
+	std::string layer_name;
+	std::vector<std::string> chiplet_list;  // List of chiplets that execute this layer
+	cidx_t chiplet_index;  // Index of current chiplet in the list (0-based)
+	
+	LayerExecInfo(const std::string& name, const std::vector<std::string>& chiplets, cidx_t idx)
+		: layer_name(name), chiplet_list(chiplets), chiplet_index(idx) {}
+	
+	std::string format() const{
+		if(chiplet_list.size() == 1){
+			return layer_name;
+		}else{
+			return layer_name + "[" + std::to_string(chiplet_index + 1) + "/" + std::to_string(chiplet_list.size()) + "]";
+		}
+	}
+};
+
+// Helper function to collect chiplet schedule
+// Uses a string key "x,y" to represent chiplet position
+// This function traverses the tree in execution order (same as print_tree):
+// - T nodes: children execute sequentially (one after another)
+// - S nodes: children execute in parallel (pipeline stages, simultaneously)
+// For each layer, we add it to the schedule of chiplets that actually execute it
+static void collect_chiplet_schedule(const SchNode* node, std::map<std::string, std::vector<LayerExecInfo> >& schedule_map){
+	if(node->get_type() == SchNode::NodeType::L){
+		const LNode* lnode = static_cast<const LNode*>(node);
+		const Cluster& cl = lnode->get_cluster();
+		cidx_t num_cores = cl.num_cores();
+		std::string layer_name = lnode->getLayer().name();
+		
+		// Collect all chiplet positions that execute this layer
+		std::vector<std::string> chiplet_list;
+		chiplet_list.reserve(num_cores);
+		for(cidx_t i = 0; i < num_cores; ++i){
+			pos_t pos = cl[i];
+			std::string key = std::to_string(static_cast<int>(pos.x)) + "," + std::to_string(static_cast<int>(pos.y));
+			chiplet_list.push_back(key);
+		}
+		
+		// Add this layer to the schedule of each chiplet in the cluster
+		// Also record which chiplets are involved and the index of each chiplet
+		for(cidx_t i = 0; i < num_cores; ++i){
+			pos_t pos = cl[i];
+			std::string key = std::to_string(static_cast<int>(pos.x)) + "," + std::to_string(static_cast<int>(pos.y));
+			schedule_map[key].push_back(LayerExecInfo(layer_name, chiplet_list, i));
+		}
+	}else{
+		const Cut* cut = static_cast<const Cut*>(node);
+		const auto& children = cut->getChildren();
+		if(cut->get_type() == SchNode::NodeType::T){
+			// TCut: sequential execution - children execute one after another
+			// Process children in order (sequential)
+			for(auto child : children){
+				collect_chiplet_schedule(child, schedule_map);
+			}
+		}else{
+			// SCut: parallel/pipeline execution
+			// All children execute in parallel (simultaneously)
+			// They may use different chiplets, so we process all children
+			for(auto child : children){
+				collect_chiplet_schedule(child, schedule_map);
+			}
+		}
+	}
+}
+
+void LNode::print_chiplet_schedule(std::ostream& os) const{
+	// This should only be called from root
+	// For LNode, just collect its own schedule
+	std::map<std::string, std::vector<LayerExecInfo> > schedule_map;
+	collect_chiplet_schedule(this, schedule_map);
+	
+	// Output the schedule
+	for(const auto& pair : schedule_map){
+		os << "Chiplet(" << pair.first << "): ";
+		for(size_t i = 0; i < pair.second.size(); ++i){
+			if(i > 0) os << " -> ";
+			os << pair.second[i].format();
+		}
+		os << std::endl;
+	}
+}
+
 
 /* #################### Cut #################### */
 
@@ -395,6 +481,22 @@ void Cut::print_tree(std::string pad, std::ostream& os) const{
 	pad += '\t';
 	for(auto child: children){
 		child->print_tree(pad, os);
+	}
+}
+
+void Cut::print_chiplet_schedule(std::ostream& os) const{
+	// Collect schedule from all children
+	std::map<std::string, std::vector<LayerExecInfo> > schedule_map;
+	collect_chiplet_schedule(this, schedule_map);
+	
+	// Output the schedule
+	for(const auto& pair : schedule_map){
+		os << "Chiplet(" << pair.first << "): ";
+		for(size_t i = 0; i < pair.second.size(); ++i){
+			if(i > 0) os << " -> ";
+			os << pair.second[i].format();
+		}
+		os << std::endl;
 	}
 }
 

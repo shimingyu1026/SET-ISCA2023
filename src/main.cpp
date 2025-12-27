@@ -61,6 +61,7 @@ int main(int argc, char** argv){
 	constexpr bool print_summary = true;
 	constexpr bool print_scheme = true;
 	constexpr bool print_tree = true;
+	constexpr bool print_chiplet_schedule = true;
 
 	std::cout.precision(4);
 
@@ -272,6 +273,116 @@ int main(int argc, char** argv){
 	lid_t num_layer = network->len();
 	SAEngine::nrounds = urounds * num_layer;
 
+	// Print layer information (shape and dependencies)
+	auto print_layer_info = [&](const std::string& exp_name) {
+		std::ofstream out(exp_name + "layer_info.txt");
+		out << "Layer Information: Shape and Dependencies\n";
+		out << "==========================================\n\n";
+		out << "Note: In this framework, many operations are represented as ConvLayer:\n";
+		out << "  - Matrix multiplications (GEMM) are represented as 1x1 convolutions (R=1, S=1)\n";
+		out << "  - Fully connected layers inherit from ConvLayer\n";
+		out << "  - Transformer attention projections (Q, K, V) are represented as ConvLayer\n";
+		out << "  - Feedforward layers in transformers are represented as ConvLayer\n";
+		out << "This is because 1x1 convolution is mathematically equivalent to matrix multiplication.\n\n";
+		
+		for(lid_t i = 0; i < num_layer; ++i){
+			const Node& node = network->getNode(i);
+			const Layer& layer = node.layer();
+			
+			out << "Layer " << i << ": " << node.name() << "\n";
+			
+			// Layer type
+			if(REF_IS_INSTANCE(layer, GroupConvLayer)){
+				const GroupConvLayer* gconv = static_cast<const GroupConvLayer*>(&layer);
+				const auto& wl = gconv->get_workload();
+				out << "  Type: GroupConvLayer\n";
+				out << "  Workload: G=" << wl.G << ", C=" << wl.C << ", K=" << wl.K;
+				out << ", R=" << wl.R << ", S=" << wl.S << ", H=" << wl.H << ", W=" << wl.W << "\n";
+			}else if(REF_IS_INSTANCE(layer, FCLayer)){
+				// FCLayer inherits from ConvLayer, but has its own Workload structure
+				// We can get ConvLayer workload, but it's converted from FC Workload
+				const ConvLayer* conv = static_cast<const ConvLayer*>(&layer);
+				const auto& wl = conv->get_workload();
+				out << "  Type: FCLayer (Full Connected Layer / Matrix Multiplication)\n";
+				out << "  Workload: C=" << wl.C << ", K=" << wl.K << ", R=" << wl.R << ", S=" << wl.S;
+				out << " (Note: R=IH, S=IW for FC layer, represents matrix multiplication)\n";
+			}else if(REF_IS_INSTANCE(layer, ConvLayer)){
+				const ConvLayer* conv = static_cast<const ConvLayer*>(&layer);
+				const auto& wl = conv->get_workload();
+				out << "  Type: ConvLayer";
+				// Check if it's actually a matrix multiplication (1x1 conv with no stride)
+				// For matrix multiplication: R=1, S=1, sH=1, sW=1 (1x1 kernel, stride 1)
+				if(wl.R == 1 && wl.S == 1 && wl.sH == 1 && wl.sW == 1){
+					out << " (Matrix Multiplication: 1x1 conv, equivalent to GEMM)";
+				}
+				out << "\n";
+				out << "  Workload: C=" << wl.C << ", K=" << wl.K << ", R=" << wl.R << ", S=" << wl.S;
+				out << ", H=" << wl.H << ", W=" << wl.W << ", sH=" << wl.sH << ", sW=" << wl.sW << "\n";
+			}else if(REF_IS_INSTANCE(layer, PoolingLayer)){
+				// PoolingLayer inherits from LRLayer, but has its own Workload structure
+				// We can get LRLayer workload, but it's converted from Pooling Workload
+				const LRLayer* lr = static_cast<const LRLayer*>(&layer);
+				const auto& wl = lr->get_workload();
+				out << "  Type: PoolingLayer\n";
+				out << "  Workload: K=" << wl.K << ", H=" << wl.H << ", W=" << wl.W;
+				out << ", R=" << wl.R << ", S=" << wl.S << ", sH=" << wl.sH << ", sW=" << wl.sW << "\n";
+			}else if(REF_IS_INSTANCE(layer, EltwiseLayer)){
+				out << "  Type: EltwiseLayer (Element-wise operations like Add/Multiply)\n";
+			}else if(REF_IS_INSTANCE(layer, LRLayer)){
+				const LRLayer* lr = static_cast<const LRLayer*>(&layer);
+				const auto& wl = lr->get_workload();
+				out << "  Type: LRLayer (Local-region Layer, e.g., Transpose, Reshape)\n";
+				out << "  Workload: K=" << wl.K << ", H=" << wl.H << ", W=" << wl.W;
+				out << ", N=" << wl.N << ", R=" << wl.R << ", S=" << wl.S;
+				out << ", sK=" << wl.sK << ", sH=" << wl.sH << ", sW=" << wl.sW << "\n";
+			}else{
+				out << "  Type: Unknown\n";
+			}
+			
+			// Shapes
+			out << "  Input Shape (ifmap): " << layer.tot_ifmap_shape() << "\n";
+			out << "  Output Shape (ofmap): " << layer.ofmap_shape() << "\n";
+			if(layer.weight_size() > 0){
+				out << "  Weight Shape: " << layer.weight_shape() << " (size: " << layer.weight_size() << ")\n";
+			}else{
+				out << "  Weight: None\n";
+			}
+			
+			// Dependencies
+			const Bitset& prevs = node.getPrevs();
+			if(prevs.count() > 0){
+				out << "  Dependencies (previous layers): ";
+				bool first = true;
+				FOR_BITSET(it, prevs){
+					if(!first) out << ", ";
+					out << it;
+					first = false;
+				}
+				out << "\n";
+			}else{
+				out << "  Dependencies: None (input layer)\n";
+			}
+			
+			// Next layers
+			const Bitset& nexts = node.get_nexts();
+			if(nexts.count() > 0){
+				out << "  Next layers: ";
+				bool first = true;
+				FOR_BITSET(it, nexts){
+					if(!first) out << ", ";
+					out << it;
+					first = false;
+				}
+				out << "\n";
+			}
+			
+			out << "\n";
+		}
+	};
+	
+	// Print layer information
+	print_layer_info(exp_name);
+
 	std::cout << "Seed: " << seed << std::endl;
 	std::cout << "Core " << core_type;
 	std::cout << " Network " << net_name;
@@ -311,6 +422,10 @@ int main(int argc, char** argv){
 		if(print_tree){
 			std::ofstream out(exp_name + "init_tree.txt");
 			init_res->print_tree("", out);
+		}
+		if(print_chiplet_schedule){
+			std::ofstream out(exp_name + "init_chiplet_schedule.txt");
+			init_res->print_chiplet_schedule(out);
 		}
 	}else{
 		std::cout << exp_name + "init finds no valid solution." << std::endl;
@@ -359,6 +474,10 @@ int main(int argc, char** argv){
 			if(print_tree){
 				std::ofstream out(exp_name + method + "_tree.txt");
 				cur_sch.sch->print_tree("", out);
+			}
+			if(print_chiplet_schedule){
+				std::ofstream out(exp_name + method + "_chiplet_schedule.txt");
+				cur_sch.sch->print_chiplet_schedule(out);
 			}
 
 #ifndef NOT_GEN_IR
@@ -420,6 +539,10 @@ int main(int argc, char** argv){
 			if(print_tree){
 				std::ofstream out(exp_name + method + "_tree.txt");
 				SA_sch.sch->print_tree("", out);
+			}
+			if(print_chiplet_schedule){
+				std::ofstream out(exp_name + method + "_chiplet_schedule.txt");
+				SA_sch.sch->print_chiplet_schedule(out);
 			}
 
 #ifndef NOT_GEN_IR
