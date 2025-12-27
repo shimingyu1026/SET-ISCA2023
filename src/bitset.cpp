@@ -24,11 +24,19 @@ Bitset::bitlen_t Bitset::count() const{
 }
 
 Bitset::bitlen_t Bitset::first() const{
-	return static_cast<Bitset::bitlen_t>(std_bs::_Find_first());
+	// 跨平台实现：替代 GCC 特定的 _Find_first()
+	for(bitlen_t i = 0; i < size(); ++i) {
+		if(test(i)) return i;
+	}
+	return size();
 }
 
 Bitset::bitlen_t Bitset::next(Bitset::bitlen_t bit) const{
-	return static_cast<Bitset::bitlen_t>(std_bs::_Find_next(bit));
+	// 跨平台实现：替代 GCC 特定的 _Find_next()
+	for(bitlen_t i = bit + 1; i < size(); ++i) {
+		if(test(i)) return i;
+	}
+	return size();
 }
 
 bool Bitset::contains(Bitset::bitlen_t bit) const{
