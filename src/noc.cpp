@@ -15,7 +15,7 @@ bw_t NoC::DRAM_bw;
 bw_t NoC::NoC_bw;
 std::vector<pos_t> NoC::dram_list;
 
-NoC::NoC(bool _calc_bw): calc_bw(_calc_bw), tot_hops(0), tot_DRAM_acc(0){}
+NoC::NoC(bool _calc_bw): calc_bw(_calc_bw), tot_hops(0), tot_DRAM_acc(0), track_transfers(false){}
 
 NoC NoC::operator+(const NoC& other) const{
 	NoC x = *this;
@@ -61,6 +61,26 @@ void NoC::clear(){
 	tot_hops = 0;
 	tot_DRAM_acc = 0;
 	link_hops.clear();
+	transfer_info.clear();
+	current_from_layer.clear();
+	current_to_layer.clear();
+}
+
+void NoC::enable_transfer_tracking(bool enable){
+	track_transfers = enable;
+}
+
+void NoC::clear_transfer_info(){
+	transfer_info.clear();
+}
+
+void NoC::set_layer_names(const std::string& from_layer, const std::string& to_layer){
+	current_from_layer = from_layer;
+	current_to_layer = to_layer;
+}
+
+std::vector<NoC::TransferInfo> NoC::get_transfer_info() const{
+	return transfer_info;
 }
 
 cycle_t NoC::get_time() const{
@@ -159,6 +179,27 @@ void NoC::betweenLayout(const UniqueLayout& fromLayout, const DataLayout& toLayo
 			auto fromEntry = *it;
 			vol_t v = calc_intersect(fromEntry.range, toRange, fromB, toB);
 			if(v == 0) continue;
+
+			// Record transfer information if tracking is enabled
+			if(track_transfers){
+				TransferInfo info;
+				info.from_chiplet = fromEntry.tile;
+				info.data_size = v;
+				info.data_range = fromEntry.range.intersect(toRange);
+				info.from_layer = current_from_layer;
+				info.to_layer = current_to_layer;
+				
+				if(toEntry.numTile == 1){
+					info.to_chiplets.push_back(*toEntry.tiles);
+					info.transfer_type = "unicast";
+				}else{
+					for(cidx_t j = 0; j < toEntry.numTile; ++j){
+						info.to_chiplets.push_back(toEntry.tiles[j]);
+					}
+					info.transfer_type = "multicast";
+				}
+				transfer_info.push_back(info);
+			}
 
 			if(toEntry.numTile == 1){
 				h += unicastCalc(fromEntry.tile, *toEntry.tiles, v);

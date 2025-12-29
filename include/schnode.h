@@ -143,6 +143,8 @@ public:
 	void print_summary(std::ostream& os = std::cout) const;
 	// Prints chiplet execution schedule (which layers each chiplet executes in order).
 	virtual void print_chiplet_schedule(std::ostream& os = std::cout) const =0;
+	// Prints data flow between chiplets for each layer (source, destination, data size).
+	virtual void print_dataflow(std::ostream& os = std::cout) const =0;
 
 	friend std::ostream& operator<<(std::ostream& os, const SchNode& sch);
 	friend std::ostream& operator<<(std::ostream& os, const SchNode* sch);
@@ -211,6 +213,7 @@ public:
 	virtual void print_scheme(std::string pad = "", std::ostream& os = std::cout) const override;
 	virtual void print_tree(std::string pad = "", std::ostream& os = std::cout) const override;
 	virtual void print_chiplet_schedule(std::ostream& os = std::cout) const override;
+	virtual void print_dataflow(std::ostream& os = std::cout) const override;
 
 #ifndef NOT_GEN_IR
 	// **************** Code for IR generation ****************
@@ -258,6 +261,7 @@ public:
 	virtual void print_scheme(std::string pad = "", std::ostream& os = std::cout) const override;
 	virtual void print_tree(std::string pad = "", std::ostream& os = std::cout) const override;
 	virtual void print_chiplet_schedule(std::ostream& os = std::cout) const override;
+	virtual void print_dataflow(std::ostream& os = std::cout) const override;
 
 #ifndef NOT_GEN_IR
 	// **************** Code for IR generation ****************

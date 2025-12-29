@@ -169,6 +169,34 @@ public:
 	};
 	// Gets all link hops
 	std::vector<link_info> get_link_info() const;
+
+	// Data transfer information for detailed flow tracking
+	struct TransferInfo{
+		pos_t from_chiplet;      // Source chiplet position
+		std::vector<pos_t> to_chiplets;  // Destination chiplet positions
+		vol_t data_size;         // Data volume transferred
+		std::string transfer_type; // "unicast" or "multicast"
+		std::string from_layer;   // Source layer name
+		std::string to_layer;     // Destination layer name
+		fmap_range data_range;    // Data range being transferred
+
+		TransferInfo() : data_size(0) {}
+	};
+
+	// Enable/disable transfer tracking
+	void enable_transfer_tracking(bool enable = true);
+	void clear_transfer_info();
+	std::vector<TransferInfo> get_transfer_info() const;
+	void set_layer_names(const std::string& from_layer, const std::string& to_layer);
+
+	// Transfer tracking (public for access in layerengine)
+	bool track_transfers;
+	std::string current_from_layer;
+	std::string current_to_layer;
+
+private:
+	// Transfer tracking
+	std::vector<TransferInfo> transfer_info;
 };
 
 #endif // NOC_H

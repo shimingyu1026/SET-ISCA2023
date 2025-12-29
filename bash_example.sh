@@ -1,1 +1,1 @@
-./build/stschedule --args bash_exp gpt_prefill 1 eyeriss 5 5 1 24 1 10 0
+./build/stschedule --args bash_exp resnet 1 eyeriss 3 7 1 24 1 10 0

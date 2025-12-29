@@ -124,10 +124,12 @@ LayerScheme StdLayerEngine::search(LNode* curNode) const{
 		// Placement must yield at least one valid scheme
 		assert(placeIter);
 		do{
-			// Init placement
-			placeSch.initPlacement(cluster);
+		// Init placement
+		placeSch.initPlacement(cluster);
 
-			calcNoC(noc, placeSch, curNode);
+		// Enable transfer tracking for dataflow analysis
+		noc.enable_transfer_tracking(true);
+		calcNoC(noc, placeSch, curNode);
 
 			cycle_t nocTime = noc.get_time();
 
@@ -165,7 +167,8 @@ LayerScheme StdLayerEngine::search(LNode* curNode) const{
 		// Finalize layerSch.place
 		layerSch.place.finalize();
 
-		// Update NoC
+		// Update NoC (enable transfer tracking for final scheme)
+		layerSch.noc.enable_transfer_tracking(true);
 		calcNoC(layerSch.noc, layerSch.place, curNode);
 	}
 
@@ -304,6 +307,9 @@ void StdLayerEngine::calcNoC(NoC& noc, const PlaceSch& place, LNode* curNode) co
 			if(curNode->get_dirp_set().contains(prev)){
 				const LNode* fromNode = (*(curNode->lnodeList))[prev];
 				const auto& fromLayout = fromNode->get_place_sch().getOfmL();
+				if(noc.track_transfers){
+					noc.set_layer_names(network->getNode(prev).name(), layerT.name() + " (weight)");
+				}
 				noc.betweenLayout(fromLayout, place.getWgtL(), curC, fromNode->num_batch, B);
 			}else{
 				// TODO: Change to last layer's memLayout.
@@ -342,10 +348,13 @@ void StdLayerEngine::calcNoC(NoC& noc, const PlaceSch& place, LNode* curNode) co
 	FOR_BITSET(it, prevs){
 		const lid_t prev = it;
 		const len_t prevC = network->getNode(prev).layer().ofmap_shape().c;
-		if(curNode->get_dirp_set().contains(prev)){
-			const LNode* fromNode = (*(curNode->lnodeList))[prev];
-			const auto& fromLayout = fromNode->get_place_sch().getOfmL();
-			noc.betweenLayout(fromLayout, place.getIfmL(), curC, fromNode->num_batch, B);
+			if(curNode->get_dirp_set().contains(prev)){
+				const LNode* fromNode = (*(curNode->lnodeList))[prev];
+				const auto& fromLayout = fromNode->get_place_sch().getOfmL();
+				if(noc.track_transfers){
+					noc.set_layer_names(network->getNode(prev).name(), layerT.name());
+				}
+				noc.betweenLayout(fromLayout, place.getIfmL(), curC, fromNode->num_batch, B);
 		}else{
 			// TODO: Change to last layer's memLayout.
 			noc.fromRemoteMem(place.getIfmL(), curC, curC + prevC);

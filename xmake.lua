@@ -15,6 +15,7 @@ set_languages("cxx17")
 -- 设置警告级别
 set_warnings("all", "extra")
 
+add_requires("yaml-cpp", {system = false})
 -- 定义目标可执行文件
 target("stschedule")
     -- 设置目标类型为可执行文件
@@ -30,6 +31,10 @@ target("stschedule")
     
     -- 添加链接库
     add_syslinks("pthread", "m")
+    
+    -- 添加yaml-cpp依赖
+
+    add_packages("yaml-cpp")
     
     -- 设置输出目录
     set_targetdir("$(builddir)")
