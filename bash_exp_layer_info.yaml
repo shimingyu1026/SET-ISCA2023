@@ -671,6 +671,805 @@ layer_information:
         - 57
         - 60
     - layer_id: 57
+      name: conv_4_6_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 56
+      next_layers:
+        - 58
+    - layer_id: 58
+      name: conv_4_6_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 57
+      next_layers:
+        - 59
+    - layer_id: 59
+      name: conv_4_6_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 58
+      next_layers:
+        - 60
+    - layer_id: 60
+      name: conv_4_6_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 56
+        - 59
+      next_layers:
+        - 61
+        - 64
+    - layer_id: 61
+      name: conv_4_7_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 60
+      next_layers:
+        - 62
+    - layer_id: 62
+      name: conv_4_7_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 61
+      next_layers:
+        - 63
+    - layer_id: 63
+      name: conv_4_7_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 62
+      next_layers:
+        - 64
+    - layer_id: 64
+      name: conv_4_7_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 60
+        - 63
+      next_layers:
+        - 65
+        - 68
+    - layer_id: 65
+      name: conv_4_8_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 64
+      next_layers:
+        - 66
+    - layer_id: 66
+      name: conv_4_8_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 65
+      next_layers:
+        - 67
+    - layer_id: 67
+      name: conv_4_8_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 66
+      next_layers:
+        - 68
+    - layer_id: 68
+      name: conv_4_8_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 64
+        - 67
+      next_layers:
+        - 69
+        - 72
+    - layer_id: 69
+      name: conv_4_9_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 68
+      next_layers:
+        - 70
+    - layer_id: 70
+      name: conv_4_9_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 69
+      next_layers:
+        - 71
+    - layer_id: 71
+      name: conv_4_9_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 70
+      next_layers:
+        - 72
+    - layer_id: 72
+      name: conv_4_9_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 68
+        - 71
+      next_layers:
+        - 73
+        - 76
+    - layer_id: 73
+      name: conv_4_10_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 72
+      next_layers:
+        - 74
+    - layer_id: 74
+      name: conv_4_10_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 73
+      next_layers:
+        - 75
+    - layer_id: 75
+      name: conv_4_10_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 74
+      next_layers:
+        - 76
+    - layer_id: 76
+      name: conv_4_10_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 72
+        - 75
+      next_layers:
+        - 77
+        - 80
+    - layer_id: 77
+      name: conv_4_11_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 76
+      next_layers:
+        - 78
+    - layer_id: 78
+      name: conv_4_11_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 77
+      next_layers:
+        - 79
+    - layer_id: 79
+      name: conv_4_11_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 78
+      next_layers:
+        - 80
+    - layer_id: 80
+      name: conv_4_11_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 76
+        - 79
+      next_layers:
+        - 81
+        - 84
+    - layer_id: 81
+      name: conv_4_12_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 80
+      next_layers:
+        - 82
+    - layer_id: 82
+      name: conv_4_12_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 81
+      next_layers:
+        - 83
+    - layer_id: 83
+      name: conv_4_12_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 82
+      next_layers:
+        - 84
+    - layer_id: 84
+      name: conv_4_12_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 80
+        - 83
+      next_layers:
+        - 85
+        - 88
+    - layer_id: 85
+      name: conv_4_13_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 84
+      next_layers:
+        - 86
+    - layer_id: 86
+      name: conv_4_13_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 85
+      next_layers:
+        - 87
+    - layer_id: 87
+      name: conv_4_13_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 86
+      next_layers:
+        - 88
+    - layer_id: 88
+      name: conv_4_13_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 84
+        - 87
+      next_layers:
+        - 89
+        - 92
+    - layer_id: 89
+      name: conv_4_14_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 88
+      next_layers:
+        - 90
+    - layer_id: 90
+      name: conv_4_14_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 89
+      next_layers:
+        - 91
+    - layer_id: 91
+      name: conv_4_14_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 90
+      next_layers:
+        - 92
+    - layer_id: 92
+      name: conv_4_14_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 88
+        - 91
+      next_layers:
+        - 93
+        - 96
+    - layer_id: 93
+      name: conv_4_15_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 92
+      next_layers:
+        - 94
+    - layer_id: 94
+      name: conv_4_15_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 93
+      next_layers:
+        - 95
+    - layer_id: 95
+      name: conv_4_15_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 94
+      next_layers:
+        - 96
+    - layer_id: 96
+      name: conv_4_15_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 92
+        - 95
+      next_layers:
+        - 97
+        - 100
+    - layer_id: 97
+      name: conv_4_16_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 96
+      next_layers:
+        - 98
+    - layer_id: 98
+      name: conv_4_16_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 97
+      next_layers:
+        - 99
+    - layer_id: 99
+      name: conv_4_16_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 98
+      next_layers:
+        - 100
+    - layer_id: 100
+      name: conv_4_16_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 96
+        - 99
+      next_layers:
+        - 101
+        - 104
+    - layer_id: 101
+      name: conv_4_17_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 100
+      next_layers:
+        - 102
+    - layer_id: 102
+      name: conv_4_17_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 101
+      next_layers:
+        - 103
+    - layer_id: 103
+      name: conv_4_17_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 102
+      next_layers:
+        - 104
+    - layer_id: 104
+      name: conv_4_17_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 100
+        - 103
+      next_layers:
+        - 105
+        - 108
+    - layer_id: 105
+      name: conv_4_18_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 104
+      next_layers:
+        - 106
+    - layer_id: 106
+      name: conv_4_18_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 105
+      next_layers:
+        - 107
+    - layer_id: 107
+      name: conv_4_18_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 106
+      next_layers:
+        - 108
+    - layer_id: 108
+      name: conv_4_18_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 104
+        - 107
+      next_layers:
+        - 109
+        - 112
+    - layer_id: 109
+      name: conv_4_19_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 108
+      next_layers:
+        - 110
+    - layer_id: 110
+      name: conv_4_19_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 109
+      next_layers:
+        - 111
+    - layer_id: 111
+      name: conv_4_19_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 110
+      next_layers:
+        - 112
+    - layer_id: 112
+      name: conv_4_19_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 108
+        - 111
+      next_layers:
+        - 113
+        - 116
+    - layer_id: 113
+      name: conv_4_20_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 112
+      next_layers:
+        - 114
+    - layer_id: 114
+      name: conv_4_20_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 113
+      next_layers:
+        - 115
+    - layer_id: 115
+      name: conv_4_20_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 114
+      next_layers:
+        - 116
+    - layer_id: 116
+      name: conv_4_20_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 112
+        - 115
+      next_layers:
+        - 117
+        - 120
+    - layer_id: 117
+      name: conv_4_21_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 116
+      next_layers:
+        - 118
+    - layer_id: 118
+      name: conv_4_21_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 117
+      next_layers:
+        - 119
+    - layer_id: 119
+      name: conv_4_21_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 118
+      next_layers:
+        - 120
+    - layer_id: 120
+      name: conv_4_21_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 116
+        - 119
+      next_layers:
+        - 121
+        - 124
+    - layer_id: 121
+      name: conv_4_22_a
+      type: ConvLayer
+      is_gemm: true
+      workload: C=1024, K=256, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (1024, 14, 14)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 1024, 1, size: 262144)"
+      dependencies:
+        - 120
+      next_layers:
+        - 122
+    - layer_id: 122
+      name: conv_4_22_b
+      type: ConvLayer
+      workload: C=256, K=256, R=3, S=3, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 16, 16)
+      output_shape: (256, 14, 14)
+      weight_shape: "(256, 256, 9, size: 589824)"
+      dependencies:
+        - 121
+      next_layers:
+        - 123
+    - layer_id: 123
+      name: conv_4_22_c
+      type: ConvLayer
+      is_gemm: true
+      workload: C=256, K=1024, R=1, S=1, H=14, W=14, sH=1, sW=1
+      input_shape: (256, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight_shape: "(1024, 256, 1, size: 262144)"
+      dependencies:
+        - 122
+      next_layers:
+        - 124
+    - layer_id: 124
+      name: conv_4_22_res
+      type: EltwiseLayer
+      input_shape: (2048, 14, 14)
+      output_shape: (1024, 14, 14)
+      weight: ~
+      dependencies:
+        - 120
+        - 123
+      next_layers:
+        - 125
+        - 128
+    - layer_id: 125
       name: conv_5_0_a
       type: ConvLayer
       workload: C=1024, K=512, R=1, S=1, H=7, W=7, sH=2, sW=2
@@ -678,10 +1477,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 1024, 1, size: 524288)"
       dependencies:
-        - 56
+        - 124
       next_layers:
-        - 58
-    - layer_id: 58
+        - 126
+    - layer_id: 126
       name: conv_5_0_b
       type: ConvLayer
       workload: C=512, K=512, R=3, S=3, H=7, W=7, sH=1, sW=1
@@ -689,10 +1488,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 512, 9, size: 2359296)"
       dependencies:
-        - 57
+        - 125
       next_layers:
-        - 59
-    - layer_id: 59
+        - 127
+    - layer_id: 127
       name: conv_5_0_c
       type: ConvLayer
       is_gemm: true
@@ -701,10 +1500,10 @@ layer_information:
       output_shape: (2048, 7, 7)
       weight_shape: "(2048, 512, 1, size: 1048576)"
       dependencies:
-        - 58
+        - 126
       next_layers:
-        - 61
-    - layer_id: 60
+        - 129
+    - layer_id: 128
       name: conv_5_br
       type: ConvLayer
       workload: C=1024, K=2048, R=1, S=1, H=7, W=7, sH=2, sW=2
@@ -712,22 +1511,22 @@ layer_information:
       output_shape: (2048, 7, 7)
       weight_shape: "(2048, 1024, 1, size: 2097152)"
       dependencies:
-        - 56
+        - 124
       next_layers:
-        - 61
-    - layer_id: 61
+        - 129
+    - layer_id: 129
       name: conv_5_0_res
       type: EltwiseLayer
       input_shape: (4096, 7, 7)
       output_shape: (2048, 7, 7)
       weight: ~
       dependencies:
-        - 59
-        - 60
+        - 127
+        - 128
       next_layers:
-        - 62
-        - 65
-    - layer_id: 62
+        - 130
+        - 133
+    - layer_id: 130
       name: conv_5_1_a
       type: ConvLayer
       is_gemm: true
@@ -736,10 +1535,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 2048, 1, size: 1048576)"
       dependencies:
-        - 61
+        - 129
       next_layers:
-        - 63
-    - layer_id: 63
+        - 131
+    - layer_id: 131
       name: conv_5_1_b
       type: ConvLayer
       workload: C=512, K=512, R=3, S=3, H=7, W=7, sH=1, sW=1
@@ -747,10 +1546,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 512, 9, size: 2359296)"
       dependencies:
-        - 62
+        - 130
       next_layers:
-        - 64
-    - layer_id: 64
+        - 132
+    - layer_id: 132
       name: conv_5_1_c
       type: ConvLayer
       is_gemm: true
@@ -759,22 +1558,22 @@ layer_information:
       output_shape: (2048, 7, 7)
       weight_shape: "(2048, 512, 1, size: 1048576)"
       dependencies:
-        - 63
+        - 131
       next_layers:
-        - 65
-    - layer_id: 65
+        - 133
+    - layer_id: 133
       name: conv_5_1_res
       type: EltwiseLayer
       input_shape: (4096, 7, 7)
       output_shape: (2048, 7, 7)
       weight: ~
       dependencies:
-        - 61
-        - 64
+        - 129
+        - 132
       next_layers:
-        - 66
-        - 69
-    - layer_id: 66
+        - 134
+        - 137
+    - layer_id: 134
       name: conv_5_2_a
       type: ConvLayer
       is_gemm: true
@@ -783,10 +1582,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 2048, 1, size: 1048576)"
       dependencies:
-        - 65
+        - 133
       next_layers:
-        - 67
-    - layer_id: 67
+        - 135
+    - layer_id: 135
       name: conv_5_2_b
       type: ConvLayer
       workload: C=512, K=512, R=3, S=3, H=7, W=7, sH=1, sW=1
@@ -794,10 +1593,10 @@ layer_information:
       output_shape: (512, 7, 7)
       weight_shape: "(512, 512, 9, size: 2359296)"
       dependencies:
-        - 66
+        - 134
       next_layers:
-        - 68
-    - layer_id: 68
+        - 136
+    - layer_id: 136
       name: conv_5_2_c
       type: ConvLayer
       is_gemm: true
@@ -806,21 +1605,21 @@ layer_information:
       output_shape: (2048, 7, 7)
       weight_shape: "(2048, 512, 1, size: 1048576)"
       dependencies:
-        - 67
+        - 135
       next_layers:
-        - 69
-    - layer_id: 69
+        - 137
+    - layer_id: 137
       name: conv_5_2_res
       type: EltwiseLayer
       input_shape: (4096, 7, 7)
       output_shape: (2048, 7, 7)
       weight: ~
       dependencies:
-        - 65
-        - 68
+        - 133
+        - 136
       next_layers:
-        - 70
-    - layer_id: 70
+        - 138
+    - layer_id: 138
       name: pool5
       type: PoolingLayer
       workload: K=2048, H=1, W=1, R=7, S=7, sH=7, sW=7
@@ -828,10 +1627,10 @@ layer_information:
       output_shape: (2048, 1, 1)
       weight: ~
       dependencies:
-        - 69
+        - 137
       next_layers:
-        - 71
-    - layer_id: 71
+        - 139
+    - layer_id: 139
       name: fc
       type: FCLayer
       workload: C=2048, K=1000, R=1, S=1 (R=IH, S=IW for FC layer)
@@ -839,5 +1638,5 @@ layer_information:
       output_shape: (1000, 1, 1)
       weight_shape: "(1000, 2048, 1, size: 2048000)"
       dependencies:
-        - 70
+        - 138
       next_layers: ~

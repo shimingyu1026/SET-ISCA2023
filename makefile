@@ -46,6 +46,9 @@ clean:
 	-@rm -rvf $(OBJ_DIR)/*
 	-@rm -rvf $(APP_DIR)/*
 
+clean-all:
+	-@rm -rvf bash_exp_*.txt
+
 info:
 	@echo "[*] Application dir: ${APP_DIR}     "
 	@echo "[*] Object dir:      ${OBJ_DIR}     "

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <map>
+#include <sstream>
 #include <vector>
 
 #include "layerengine.h"
@@ -339,23 +340,62 @@ void LNode::print_chiplet_schedule(std::ostream &os) const {
   }
 }
 
-void LNode::print_dataflow(std::ostream &os) const {
+// Helper function to collect all transfers from the entire tree
+static void collect_all_transfers(
+    const SchNode *node,
+    std::vector<NoC::TransferInfo> &all_transfers) {
+  if (node->get_type() == SchNode::NodeType::L) {
+    const LNode *lnode = static_cast<const LNode *>(node);
+    const auto &transfers = lnode->get_noc().get_transfer_info();
+    all_transfers.insert(all_transfers.end(), transfers.begin(), transfers.end());
+  } else {
+    const Cut *cut = static_cast<const Cut *>(node);
+    const auto &children = cut->getChildren();
+    for (auto child : children) {
+      collect_all_transfers(child, all_transfers);
+    }
+  }
+}
+
+void LNode::print_dataflow(std::ostream &os, const std::vector<NoC::TransferInfo> *all_transfers_ptr) const {
   os << "Layer: " << layert.name() << std::endl;
-  const auto &transfers = noc.get_transfer_info();
-  if (transfers.empty()) {
+  
+  // Find transfers from current layer to next layers (exclude weight transfers)
+  std::vector<NoC::TransferInfo> send_transfers;
+  std::string layer_name = layert.name();
+  
+  if (all_transfers_ptr != nullptr) {
+    // Use provided all_transfers
+    for (const auto &t : *all_transfers_ptr) {
+      if (t.from_layer == layer_name && t.to_layer.find(" (weight)") == std::string::npos) {
+        send_transfers.push_back(t);
+      }
+    }
+  } else {
+    // Fallback: collect from current node only (should not happen in normal flow)
+    const auto &transfers = noc.get_transfer_info();
+    for (const auto &t : transfers) {
+      if (t.from_layer == layer_name && t.to_layer.find(" (weight)") == std::string::npos) {
+        send_transfers.push_back(t);
+      }
+    }
+  }
+  
+  if (send_transfers.empty()) {
     os << "  No inter-chiplet data transfers (or tracking disabled)"
        << std::endl;
+    os << std::endl;
     return;
   }
 
-  // Group transfers by source layer
+  // Group transfers by destination layer
   std::map<std::string, std::vector<NoC::TransferInfo>> grouped;
-  for (const auto &t : transfers) {
-    grouped[t.from_layer].push_back(t);
+  for (const auto &t : send_transfers) {
+    grouped[t.to_layer].push_back(t);
   }
 
   for (const auto &group : grouped) {
-    os << "  From layer: " << group.first << " -> " << group.second[0].to_layer
+    os << "  To layer: " << layer_name << " -> " << group.first
        << std::endl;
     for (const auto &t : group.second) {
       os << "    Transfer: Chiplet(" << static_cast<int>(t.from_chiplet.x)
@@ -381,6 +421,328 @@ void LNode::print_dataflow(std::ostream &os) const {
     }
   }
   os << std::endl;
+}
+
+// Helper function to format layer parameters from actual computed range
+static std::string format_layer_params_from_range(const Layer& layer, const fmap_range& ofmap_range) {
+  std::ostringstream oss;
+  
+  if (REF_IS_INSTANCE(layer, GroupConvLayer)) {
+    const GroupConvLayer *gconv = static_cast<const GroupConvLayer *>(&layer);
+    const auto &wl = gconv->get_workload();
+    // Calculate actual IFMAP range from ofmap range
+    fmap_range ifmap_range = ofmap_range;
+    layer.ofm_to_ifm(ifmap_range);
+    oss << "IFMAP Height=" << ifmap_range.h.size()
+        << ", IFMAP Width=" << ifmap_range.w.size()
+        << ", Filter Height=" << wl.R
+        << ", Filter Width=" << wl.S
+        << ", Channels=" << ifmap_range.c.size()
+        << ", Num Filter=" << ofmap_range.c.size()
+        << ", Strides=(" << wl.sH << "," << wl.sW << ")"
+        << ", Groups=" << wl.G;
+  } else if (REF_IS_INSTANCE(layer, FCLayer)) {
+    const ConvLayer *conv = static_cast<const ConvLayer *>(&layer);
+    const auto &wl = conv->get_workload();
+    fmap_range ifmap_range = ofmap_range;
+    layer.ofm_to_ifm(ifmap_range);
+    oss << "IFMAP Height=" << ifmap_range.h.size()
+        << ", IFMAP Width=" << ifmap_range.w.size()
+        << ", Filter Height=1"
+        << ", Filter Width=1"
+        << ", Channels=" << ifmap_range.c.size()
+        << ", Num Filter=" << ofmap_range.c.size()
+        << ", Strides=(1,1)";
+  } else if (REF_IS_INSTANCE(layer, ConvLayer)) {
+    const ConvLayer *conv = static_cast<const ConvLayer *>(&layer);
+    const auto &wl = conv->get_workload();
+    fmap_range ifmap_range = ofmap_range;
+    layer.ofm_to_ifm(ifmap_range);
+    oss << "IFMAP Height=" << ifmap_range.h.size()
+        << ", IFMAP Width=" << ifmap_range.w.size()
+        << ", Filter Height=" << wl.R
+        << ", Filter Width=" << wl.S
+        << ", Channels=" << ifmap_range.c.size()
+        << ", Num Filter=" << ofmap_range.c.size()
+        << ", Strides=(" << wl.sH << "," << wl.sW << ")";
+  } else if (REF_IS_INSTANCE(layer, PoolingLayer)) {
+    const LRLayer *lr = static_cast<const LRLayer *>(&layer);
+    const auto &wl = lr->get_workload();
+    fmap_range ifmap_range = ofmap_range;
+    layer.ofm_to_ifm(ifmap_range);
+    oss << "IFMAP Height=" << ifmap_range.h.size()
+        << ", IFMAP Width=" << ifmap_range.w.size()
+        << ", Filter Height=" << wl.R
+        << ", Filter Width=" << wl.S
+        << ", Channels=" << ofmap_range.c.size()
+        << ", Strides=(" << wl.sH << "," << wl.sW << ")";
+  } else {
+    oss << "(未找到层信息)";
+  }
+  
+  return oss.str();
+}
+
+// Structure to store layer execution info with transfer information
+struct LayerExecInfoWithTransfers {
+  std::string layer_name;
+  std::string layer_params;
+  std::vector<std::string> chiplet_list;
+  cidx_t chiplet_index;
+  std::vector<NoC::TransferInfo> receive_transfers;  // 从上一层接收
+  std::vector<NoC::TransferInfo> send_transfers;    // 发送到下一层
+  std::vector<NoC::TransferInfo> next_receive_transfers;  // 下一层从当前层接收（对应send_transfers）
+  
+  LayerExecInfoWithTransfers(const std::string &name, const std::string &params,
+                              const std::vector<std::string> &chiplets, cidx_t idx)
+      : layer_name(name), layer_params(params), chiplet_list(chiplets), chiplet_index(idx) {}
+  
+  std::string format() const {
+    if (chiplet_list.size() == 1) {
+      return layer_name;
+    } else {
+      return layer_name + "[" + std::to_string(chiplet_index + 1) + "/" +
+             std::to_string(chiplet_list.size()) + "]";
+    }
+  }
+};
+
+// Helper function to collect chiplet complete process
+static void collect_chiplet_complete_process(
+    const SchNode *node,
+    std::map<std::string, std::vector<LayerExecInfoWithTransfers>> &process_map,
+    const std::vector<NoC::TransferInfo> &all_transfers) {
+  if (node->get_type() == SchNode::NodeType::L) {
+    const LNode *lnode = static_cast<const LNode *>(node);
+    const Cluster &cl = lnode->get_cluster();
+    cidx_t num_cores = cl.num_cores();
+    std::string layer_name = lnode->getLayer().name();
+    const Layer &layer = lnode->getLayer().layer();
+
+    // Collect all chiplet positions that execute this layer
+    std::vector<std::string> chiplet_list;
+    chiplet_list.reserve(num_cores);
+    for (cidx_t i = 0; i < num_cores; ++i) {
+      pos_t pos = cl[i];
+      std::string key = std::to_string(static_cast<int>(pos.x)) + "," +
+                        std::to_string(static_cast<int>(pos.y));
+      chiplet_list.push_back(key);
+    }
+
+    // Get actual computed range for each chiplet from PlaceSch
+    std::map<std::string, fmap_range> chiplet_ofmap_ranges;
+    for (const auto &ofmap_part : lnode->get_place_sch().getOfmL()) {
+      std::string key = std::to_string(static_cast<int>(ofmap_part.second.x)) + "," +
+                       std::to_string(static_cast<int>(ofmap_part.second.y));
+      // Merge ranges if multiple parts for same chiplet
+      if (chiplet_ofmap_ranges.count(key)) {
+        // Merge ranges (take union)
+        fmap_range &existing = chiplet_ofmap_ranges[key];
+        existing.c.from = MIN(existing.c.from, ofmap_part.first.c.from);
+        existing.c.to = MAX(existing.c.to, ofmap_part.first.c.to);
+        existing.b.from = MIN(existing.b.from, ofmap_part.first.b.from);
+        existing.b.to = MAX(existing.b.to, ofmap_part.first.b.to);
+        existing.h.from = MIN(existing.h.from, ofmap_part.first.h.from);
+        existing.h.to = MAX(existing.h.to, ofmap_part.first.h.to);
+        existing.w.from = MIN(existing.w.from, ofmap_part.first.w.from);
+        existing.w.to = MAX(existing.w.to, ofmap_part.first.w.to);
+      } else {
+        chiplet_ofmap_ranges[key] = ofmap_part.first;
+      }
+    }
+
+    // Add this layer to the process of each chiplet in the cluster
+    for (cidx_t i = 0; i < num_cores; ++i) {
+      pos_t pos = cl[i];
+      std::string key = std::to_string(static_cast<int>(pos.x)) + "," +
+                        std::to_string(static_cast<int>(pos.y));
+      
+      // Get actual computed range for this chiplet
+      fmap_range ofmap_range = chiplet_ofmap_ranges.count(key) ? 
+                               chiplet_ofmap_ranges[key] : 
+                               fmap_range({0,0}, {0,0}, {0,0}, {0,0});
+      
+      // Format layer parameters from actual computed range
+      std::string layer_params = format_layer_params_from_range(layer, ofmap_range);
+      
+      LayerExecInfoWithTransfers info(layer_name, layer_params, chiplet_list, i);
+      
+      // Collect receive and send transfers for this chiplet from all transfers
+      // Receive: to current layer, to this chiplet (from previous layer)
+      // Send: from current layer, from this chiplet (to next layer)
+      for (const auto &t : all_transfers) {
+        std::string from_key = std::to_string(static_cast<int>(t.from_chiplet.x)) + "," +
+                               std::to_string(static_cast<int>(t.from_chiplet.y));
+        
+        // Send: from current layer, from this chiplet
+        // Note: to_layer might have " (weight)" suffix, so we check if it starts with layer_name
+        if (t.from_layer == layer_name && from_key == key) {
+          // Exclude weight transfers (they have " (weight)" suffix in to_layer)
+          if (t.to_layer.find(" (weight)") == std::string::npos) {
+            info.send_transfers.push_back(t);
+          }
+        }
+        
+        // Receive: to current layer, to this chiplet
+        // Note: to_layer might have " (weight)" suffix, so we check if it starts with layer_name
+        if (t.to_layer == layer_name || 
+            (t.to_layer.size() > layer_name.size() && 
+             t.to_layer.substr(0, layer_name.size()) == layer_name &&
+             t.to_layer.substr(layer_name.size()) == " (weight)")) {
+          for (const auto &to_pos : t.to_chiplets) {
+            std::string to_key = std::to_string(static_cast<int>(to_pos.x)) + "," +
+                                 std::to_string(static_cast<int>(to_pos.y));
+            if (to_key == key) {
+              info.receive_transfers.push_back(t);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Find corresponding receive transfers for send transfers (next layer receives from current layer)
+      // For each send transfer from current layer to next layer, find all receive transfers
+      // where the next layer receives from current layer at the destination chiplet
+      // Example: conv1 sends to pool1's Chiplet(0,0), so we find all transfers where
+      // pool1's Chiplet(0,0) receives from conv1 (from any chiplet)
+      for (const auto &send_t : info.send_transfers) {
+        // For each destination chiplet in the send transfer
+        for (const auto &send_to_pos : send_t.to_chiplets) {
+          // Find all receive transfers where:
+          // - from_layer is current layer (send_t.from_layer, e.g., "conv1")
+          // - to_layer is next layer (send_t.to_layer, e.g., "pool1")
+          // - destination chiplet matches send_to_pos (e.g., Chiplet(0,0))
+          // This represents the next layer receiving data at that chiplet from any source chiplet
+          for (const auto &t : all_transfers) {
+            if (t.from_layer == send_t.from_layer && 
+                t.to_layer == send_t.to_layer) {
+              // Check if this transfer has the destination chiplet
+              for (const auto &recv_to_pos : t.to_chiplets) {
+                if (recv_to_pos.x == send_to_pos.x && recv_to_pos.y == send_to_pos.y) {
+                  // This is a receive transfer at the destination chiplet
+                  // Add it if not already added (avoid duplicates based on from_chiplet and data_size)
+                  bool already_added = false;
+                  for (const auto &existing : info.next_receive_transfers) {
+                    if (existing.from_chiplet.x == t.from_chiplet.x &&
+                        existing.from_chiplet.y == t.from_chiplet.y &&
+                        existing.to_layer == t.to_layer &&
+                        existing.data_size == t.data_size) {
+                      // Check if to_chiplets contain the same destination
+                      bool has_same_dest = false;
+                      for (const auto &existing_to : existing.to_chiplets) {
+                        if (existing_to.x == recv_to_pos.x && existing_to.y == recv_to_pos.y) {
+                          has_same_dest = true;
+                          break;
+                        }
+                      }
+                      if (has_same_dest) {
+                        already_added = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (!already_added) {
+                    info.next_receive_transfers.push_back(t);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      process_map[key].push_back(info);
+    }
+  } else {
+    const Cut *cut = static_cast<const Cut *>(node);
+    const auto &children = cut->getChildren();
+    if (cut->get_type() == SchNode::NodeType::T) {
+      // TCut: sequential execution
+      for (auto child : children) {
+        collect_chiplet_complete_process(child, process_map, all_transfers);
+      }
+    } else {
+      // SCut: parallel execution
+      for (auto child : children) {
+        collect_chiplet_complete_process(child, process_map, all_transfers);
+      }
+    }
+  }
+}
+
+void LNode::print_chiplet_complete_process(std::ostream &os) const {
+  // First collect all transfers from the entire tree
+  std::vector<NoC::TransferInfo> all_transfers;
+  collect_all_transfers(this, all_transfers);
+  
+  std::map<std::string, std::vector<LayerExecInfoWithTransfers>> process_map;
+  collect_chiplet_complete_process(this, process_map, all_transfers);
+  
+  // Output the complete process for each chiplet
+  for (const auto &pair : process_map) {
+    os << "Chiplet(" << pair.first << "):\n";
+    std::string current_chiplet_key = pair.first; // Store current chiplet key
+    
+    for (const auto &info : pair.second) {
+      // 如果只有接收或发送，没有计算，则省略计算层
+      bool has_compute = !info.receive_transfers.empty() || !info.send_transfers.empty() || 
+                         info.layer_params != "(未找到层信息)";
+      
+      // 如果有接收数据但没有发送数据，说明是第一步，可以省略计算层
+      bool skip_compute = !info.receive_transfers.empty() && info.send_transfers.empty();
+      
+      // 计算层（如果有计算）
+      if (!skip_compute && has_compute) {
+        os << "  计算层: " << info.format();
+        if (info.layer_params != "(未找到层信息)") {
+          os << " (" << info.layer_params << ")";
+        }
+        os << "\n";
+      }
+      
+      // 传输数据（发送）- 当前层计算完成后发送到下一层
+      if (!info.send_transfers.empty()) {
+        std::map<std::string, vol_t> send_by_chiplet;
+        for (const auto &t : info.send_transfers) {
+          for (const auto &to_pos : t.to_chiplets) {
+            std::string to_key = std::to_string(static_cast<int>(to_pos.x)) + "," +
+                                 std::to_string(static_cast<int>(to_pos.y));
+            send_by_chiplet[to_key] += t.data_size;
+          }
+        }
+        for (const auto &send : send_by_chiplet) {
+          os << "  传输数据: -> Chiplet(" << send.first << ") " << send.second << " 个元素\n";
+        }
+      }
+      
+      // 接收数据 - 下一层从当前层接收的数据（对应前一步传输数据）
+      // 只显示发送到当前 chiplet 的接收数据
+      if (!info.send_transfers.empty()) {
+        // 找到所有发送到当前 chiplet 的传输（从当前层的各个 chiplet 发送到下一层的当前 chiplet）
+        std::map<std::string, vol_t> receive_by_source;
+        for (const auto &t : info.next_receive_transfers) {
+          // 检查这个传输是否发送到当前 chiplet
+          for (const auto &to_pos : t.to_chiplets) {
+            std::string to_key = std::to_string(static_cast<int>(to_pos.x)) + "," +
+                                 std::to_string(static_cast<int>(to_pos.y));
+            if (to_key == current_chiplet_key) {
+              // 这是发送到当前 chiplet 的传输，记录源 chiplet
+              std::string from_key = std::to_string(static_cast<int>(t.from_chiplet.x)) + "," +
+                                     std::to_string(static_cast<int>(t.from_chiplet.y));
+              receive_by_source[from_key] += t.data_size;
+              break;
+            }
+          }
+        }
+        // 输出接收数据（按源 chiplet 分组）
+        for (const auto &recv : receive_by_source) {
+          os << "  接收数据: <- Chiplet(" << recv.first << ") " << recv.second << " 个元素\n";
+        }
+      }
+    }
+    os << "\n";
+  }
 }
 
 /* #################### Cut #################### */
@@ -525,9 +887,110 @@ void Cut::print_chiplet_schedule(std::ostream &os) const {
   }
 }
 
-void Cut::print_dataflow(std::ostream &os) const {
+void Cut::print_dataflow(std::ostream &os, const std::vector<NoC::TransferInfo>* all_transfers_ptr) const {
+  // If this is root, collect all transfers first
+  std::vector<NoC::TransferInfo> all_transfers;
+  const std::vector<NoC::TransferInfo>* transfers_to_use = all_transfers_ptr;
+  
+  if (parent == nullptr) {
+    // This is root, collect all transfers
+    collect_all_transfers(this, all_transfers);
+    transfers_to_use = &all_transfers;
+  } else if (all_transfers_ptr != nullptr) {
+    transfers_to_use = all_transfers_ptr;
+  }
+  
   for (auto child : children) {
-    child->print_dataflow(os);
+    child->print_dataflow(os, transfers_to_use);
+  }
+}
+
+void Cut::print_chiplet_complete_process(std::ostream &os) const {
+  // First collect all transfers from the entire tree
+  std::vector<NoC::TransferInfo> all_transfers;
+  collect_all_transfers(this, all_transfers);
+  
+  // For Cut nodes, we need to collect from all children
+  // Since children may execute in parallel (SCut) or sequentially (TCut),
+  // we need to merge their process information
+  std::map<std::string, std::vector<LayerExecInfoWithTransfers>> process_map;
+  
+  for (auto child : children) {
+    std::map<std::string, std::vector<LayerExecInfoWithTransfers>> child_process_map;
+    collect_chiplet_complete_process(child, child_process_map, all_transfers);
+    
+    // Merge child process maps
+    for (const auto &pair : child_process_map) {
+      process_map[pair.first].insert(
+          process_map[pair.first].end(),
+          pair.second.begin(),
+          pair.second.end());
+    }
+  }
+  
+  // Output the complete process for each chiplet
+  for (const auto &pair : process_map) {
+    os << "Chiplet(" << pair.first << "):\n";
+    std::string current_chiplet_key = pair.first; // Store current chiplet key
+    
+    for (const auto &info : pair.second) {
+      // 如果只有接收或发送，没有计算，则省略计算层
+      bool has_compute = !info.receive_transfers.empty() || !info.send_transfers.empty() || 
+                         info.layer_params != "(未找到层信息)";
+      
+      // 如果有接收数据但没有发送数据，说明是第一步，可以省略计算层
+      bool skip_compute = !info.receive_transfers.empty() && info.send_transfers.empty();
+      
+      // 计算层（如果有计算）
+      if (!skip_compute && has_compute) {
+        os << "  计算层: " << info.format();
+        if (info.layer_params != "(未找到层信息)") {
+          os << " (" << info.layer_params << ")";
+        }
+        os << "\n";
+      }
+      
+      // 传输数据（发送）- 当前层计算完成后发送到下一层
+      if (!info.send_transfers.empty()) {
+        std::map<std::string, vol_t> send_by_chiplet;
+        for (const auto &t : info.send_transfers) {
+          for (const auto &to_pos : t.to_chiplets) {
+            std::string to_key = std::to_string(static_cast<int>(to_pos.x)) + "," +
+                                 std::to_string(static_cast<int>(to_pos.y));
+            send_by_chiplet[to_key] += t.data_size;
+          }
+        }
+        for (const auto &send : send_by_chiplet) {
+          os << "  传输数据: -> Chiplet(" << send.first << ") " << send.second << " 个元素\n";
+        }
+      }
+      
+      // 接收数据 - 下一层从当前层接收的数据（对应前一步传输数据）
+      // 只显示发送到当前 chiplet 的接收数据
+      if (!info.send_transfers.empty()) {
+        // 找到所有发送到当前 chiplet 的传输（从当前层的各个 chiplet 发送到下一层的当前 chiplet）
+        std::map<std::string, vol_t> receive_by_source;
+        for (const auto &t : info.next_receive_transfers) {
+          // 检查这个传输是否发送到当前 chiplet
+          for (const auto &to_pos : t.to_chiplets) {
+            std::string to_key = std::to_string(static_cast<int>(to_pos.x)) + "," +
+                                 std::to_string(static_cast<int>(to_pos.y));
+            if (to_key == current_chiplet_key) {
+              // 这是发送到当前 chiplet 的传输，记录源 chiplet
+              std::string from_key = std::to_string(static_cast<int>(t.from_chiplet.x)) + "," +
+                                     std::to_string(static_cast<int>(t.from_chiplet.y));
+              receive_by_source[from_key] += t.data_size;
+              break;
+            }
+          }
+        }
+        // 输出接收数据（按源 chiplet 分组）
+        for (const auto &recv : receive_by_source) {
+          os << "  接收数据: <- Chiplet(" << recv.first << ") " << recv.second << " 个元素\n";
+        }
+      }
+    }
+    os << "\n";
   }
 }
 

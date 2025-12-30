@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
   constexpr bool print_tree = true;
   constexpr bool print_chiplet_schedule = true;
   constexpr bool print_dataflow = true;
+  constexpr bool print_chiplet_complete_process = true;
 
   std::cout.precision(4);
 
@@ -496,6 +497,10 @@ int main(int argc, char **argv) {
         std::ofstream out(exp_name + "init_dataflow.txt");
         init_res->print_dataflow(out);
       }
+      if (print_chiplet_complete_process) {
+        std::ofstream out(exp_name + "init_chiplet_complete_process.txt");
+        init_res->print_chiplet_complete_process(out);
+      }
   } else {
     std::cout << exp_name + "init finds no valid solution." << std::endl;
     return 0;
@@ -552,6 +557,10 @@ int main(int argc, char **argv) {
       if (print_dataflow) {
         std::ofstream out(exp_name + method + "_dataflow.txt");
         cur_sch.sch->print_dataflow(out);
+      }
+      if (print_chiplet_complete_process) {
+        std::ofstream out(exp_name + method + "_chiplet_complete_process.txt");
+        cur_sch.sch->print_chiplet_complete_process(out);
       }
 
 #ifndef NOT_GEN_IR
@@ -623,6 +632,10 @@ int main(int argc, char **argv) {
       if (print_dataflow) {
         std::ofstream out(exp_name + method + "_dataflow.txt");
         SA_sch.sch->print_dataflow(out);
+      }
+      if (print_chiplet_complete_process) {
+        std::ofstream out(exp_name + method + "_chiplet_complete_process.txt");
+        SA_sch.sch->print_chiplet_complete_process(out);
       }
 
 #ifndef NOT_GEN_IR
