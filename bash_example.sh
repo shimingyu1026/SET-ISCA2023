@@ -1,1 +1,1 @@
-./build/stschedule --args bash_exp resnet101 1 eyeriss 8 8 1 24 1 10 0
+./build/stschedule --args bash_exp resnet 1 eyeriss 3 3 1 24 1 10 1

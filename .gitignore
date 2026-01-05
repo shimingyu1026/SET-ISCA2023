@@ -86,3 +86,4 @@ results*/
 running/
 
 .xmake/
+.vscode/

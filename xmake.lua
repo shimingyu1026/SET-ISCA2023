@@ -8,6 +8,7 @@ set_xmakever("2.7.0")
 
 -- 设置默认构建模式
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
+add_rules("plugin.compile_commands.autoupdate", {outputdir = ".vscode"})
 
 -- 设置C++标准
 set_languages("cxx17")
